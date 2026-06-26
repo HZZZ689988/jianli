@@ -6,12 +6,38 @@
 
 ### 简历主张
 
+- 负责 STM32F103 MCU 侧底层控制固件，覆盖 FreeRTOS 任务、电源/按键状态机、RK3562 `PWRON` 协同控制、电量/充电显示、IWDG 看门狗、UART 运行时协议和 UART-IAP Bootloader。
 - 参与企业级手持设备嵌入式软件开发，覆盖 STM32F103 MCU、RK3562 Android 板端服务、RK-MCU 通信协议、CAN/UART/UDP/MAVLink 链路、Bootloader/IAP、硬件联调。
-- 参与 RK3562 侧 `CommRouter`、`PeripheralManager`、`LinkController` 等服务，完成 UART、CAN、GPIO、APK、P401 网络链路之间的 MAVLink 消息路由和联调验证。
+- 参与 RK3562 侧 `CommRouter`、`PeripheralManager`、`LinkController` 等服务，完成 UART、CAN、GPIO、APK、P401 网络链路之间的 MAVLink 消息路由、按键 COMMAND_LONG 映射和联调验证。
 - 参与 P401 图传无感快速配对链路开发，基于天地端 `tun` 网卡 MAC 和 CAN/DroneCAN 自定义报文完成地面端 MAC 上报、ACK、去重和 dry-run 配对验证。
 - 使用 `logcat`、`tcpdump`、串口日志、SocketCAN、ADB、示波器/逻辑分析仪等工具定位链路问题。
 
 ### 本地证据位置
+
+- `D:\CAN_TEST1\CAN_TEST_1\README.md`
+  - 记录 STM32F103 控制固件的系统视图：RK3562 `/dev/ttyS3` 对 MCU USART2、USART1 debug log、CAN/DroneCAN、CH224、QMA6100P、PB1 电量采样、四颗电量 LED 和电源 GPIO。
+  - 记录两阶段固件布局：Bootloader `0x08000000`、APP `0x08004000`、RK UART-IAP 升级和 `IAP1` 协议。
+  - 记录电源键行为：软关机、2s 长按切换、短按电量显示、长按 LED 动画、CH224 充电闪烁显示。
+
+- `D:\CAN_TEST1\CAN_TEST_1\Core\Src\power_ctrl.c`
+  - 记录 MCU 侧电源/按键状态机：去抖、短按电量显示、关机态长按上电、开机态长按触发 RK3562 `PWRON` 低电平保持，再进入关机流程。
+  - 记录低电保护：外部电源不允许时拒绝上电并触发低电量提示。
+
+- `D:\CAN_TEST1\CAN_TEST_1\Core\Src\battery_led.c`
+  - 记录 PB1 / `Vbus_ADC` 采样、电量百分比估算、四档 LED 显示、CH224 充电检测、下一格闪烁、低电快闪和显示平滑逻辑。
+
+- `D:\CAN_TEST1\CAN_TEST_1\Core\Src\rk_uart_proto.c`
+  - 记录 RK-MCU UART runtime protocol：USART2 中断接收队列、状态机解析、`0xA5 + type + seq + len + payload + CRC16-CCITT`、TLV 组包、`HELLO`、`STATUS_SUMMARY`、`GPS_STATUS`、`COMMAND`、`ACK/ERROR`。
+  - 记录 `ENTER_BOOTLOADER` 命令如何置位 bootloader 请求，再由 APP 复位进入 Bootloader。
+
+- `D:\CAN_TEST1\CAN_TEST_1\Bootloader\Src\bootloader_main.c`
+  - 记录 Bootloader 合法 APP 检查：MSP 必须在 SRAM 范围内且 4 字节对齐，Reset_Handler 必须在 APP flash 范围内且 Thumb bit 有效。
+  - 记录 UART-IAP 流程：等待 `IAP1`、校验 16 字节 header、页擦除、写入 APP、CRC32 校验、首 APP 页延后写入、失败后继续等待升级，成功后复位。
+  - 记录跳转 APP 前关闭 SysTick/NVIC、设置 `SCB->VTOR`、加载 MSP 并跳转 Reset_Handler。
+
+- `D:\CAN_TEST1\mcu_link\README.md`
+  - 记录 RK3562 与 STM32F103 共享 UART 协议库和 RK 侧 monitor / Android native daemon 原型。
+  - 记录协议常量、TLV 语义、RK `/dev/ttyS3` 独占访问和 Health HAL 电量集成方向。
 
 - `D:\handle_fire_software\handle_fire_software_link\README.md`
   - 说明该仓库是 RK3562 Android support-service workspace。
@@ -39,6 +65,17 @@
   - 记录扩展 CAN 帧格式：`CAN ID = priority(7) << 24 | DTID << 8 | source_node_id`，payload 前 6 字节为 `tun` MAC，第 7 字节为 MAC 类型，第 8 字节为 DroneCAN 单帧 tail byte。
   - 记录地面端模拟天空端报文注入、ACK 日志和 `candump -L can1` 验证方式。
 
+- `D:\CAN_TEST1\.codex_gcs_support_lf\comm-routerd\src\main.cpp`
+  - 记录 RK3562 侧 `comm-routerd` 的 UDP/UDS/UART 多 fd `poll` 事件循环。
+  - 记录 APK、P401 TUN、UART telemetry、LocalButton、LocalCan 等 source 分类和路由规则：APK/本地外设上行到 P401，P401/UART/本地外设下行到 APK。
+
+- `D:\CAN_TEST1\.codex_gcs_support_lf\peripheral-managerd\src\main.cpp`
+  - 记录 RK3562 侧 `peripheral-managerd` 读取 input 事件，做去抖和短按/长按识别，按 JSON 映射构造 MAVLink `COMMAND_LONG`，通过 UDS 发给 `comm-routerd`。
+  - 记录 `peripheral-managerd` 集成 CAN pairing 子模块，统一处理按键和 CAN-MAC 配对事件。
+
+- `D:\CAN_TEST1\.codex_gcs_support_lf\peripheral-managerd\src\can_pairing.cpp`
+  - 记录 CAN pairing 的 SocketCAN raw socket、扩展帧过滤、MAC report/ACK 发送、重复 report 去重、`dry_run=true` 配对钩子边界。
+
 - `D:\CAN_TEST1\docs\project-status.md`
   - 记录 RK3562 地面端和 RK3588 天空端 CAN 链路 bring-up、MAC 交换、接触状态机、MCP2515/XL2515 接收链路问题和验证边界。
   - 记录地面端 `can1` 为 RK3562 SoC CAN，500 kbit/s，`sample-point 0.868`，`restart-ms 100`，由 `PeripheralManager` 等服务配置。
@@ -51,6 +88,9 @@
 
 ### 面试中可说的证据点
 
+- MCU 侧不是单纯外设 demo，而是有完整按键/电源状态机：去抖、短按显示电量、长按开关机、低电拒绝上电、RK `PWRON` 脉冲协同和软关机静默。
+- RK-MCU UART 协议有明确二进制帧和 TLV schema，状态摘要中能携带 app/git、电源、IWDG、电量、充电、接触检测等字段，并支持 RK 命令进入 Bootloader。
+- UART-IAP 有可讲的安全点：APP 偏移、向量表合法性检查、CRC32、先写非首 APP 页、成功后首 APP 页生效、失败后继续停留在升级窗口。
 - `CommRouter` 不是单纯转发 demo，而是围绕多来源 MAVLink 做 endpoint 标记、route matrix 和下行去重。
 - `PeripheralManager` 覆盖 CAN/GPIO 节点和 MAVLink-CAN bridge，属于板端外设管理和消息桥接角色。
 - `LinkController` 覆盖链路可达性检测、QoS 或网络侧辅助控制。

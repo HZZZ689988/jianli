@@ -34,14 +34,19 @@
 
 这个产品里 STM32F103 负责采集和控制更贴近硬件的状态，比如按键、传感器、电池状态、开关机控制和部分外设状态；RK3562 运行 Android，负责板端服务、APK 显示和网络链路。两边通过 UART 通信，我参与设计了运行时帧格式，包含帧头、类型、序号、长度、TLV payload 和 CRC16 校验，用于状态摘要上传和命令交互。
 
-MCU 侧我主要做 FreeRTOS 任务组织、IWDG、GPIO/ADC/I2C/UART/CAN 外设相关逻辑，以及 UART-IAP Bootloader。Bootloader 部分把 APP 区放到 `0x08004000`，由 RK3562 通过串口触发升级，流程包括握手、擦写、分包传输、CRC 校验和复位跳转。
+MCU 侧我主要做 FreeRTOS 任务组织、电源/按键状态机、IWDG、GPIO/ADC/I2C/UART/CAN 外设相关逻辑，以及 UART-IAP Bootloader。电源部分不是简单读按键，而是区分短按和长按：短按显示四档电量，长按在关机态上电，在开机态通过 PC8 模拟 RK809 `PWRON` 长按流程让 RK3562 进入关机/睡眠相关流程，再切断系统供电；低电时会拒绝上电并用最低电量灯快速闪烁提示。电量显示通过 PB1 ADC 采样估算百分比，CH224 检测到充电时会做下一格闪烁提示，并加入显示平滑避免电量灯频繁跳变。
 
-RK3562 侧我参与了 `CommRouter`、`PeripheralManager`、`LinkController` 相关联调。`CommRouter` 负责 MAVLink 消息路由和去重，`PeripheralManager` 管理 CAN/GPIO 和本地外设桥接，`LinkController` 做链路检测和网络侧辅助。后续我还参与了 P401 图传链路无感快速配对方案，基于天地端 `tun` 网卡 MAC，通过 CAN/DroneCAN 自定义报文做 MAC report、ACK 和去重，地面端在 `can1` 上完成启动上报、模拟天空端报文注入和 ACK 验证。调试时主要用 ADB、logcat、tcpdump、SocketCAN、串口日志、示波器和逻辑分析仪定位问题。
+UART 协议部分，MCU APP 运行时通过 USART2 对接 RK 的 `/dev/ttyS3`，协议是 `0xA5 + type + seq + len + payload + CRC16-CCITT`，payload 里再放版本、flags、request_id、uptime 和 TLV。它支持 `HELLO`、`STATUS_SUMMARY`、`GPS_STATUS`、`COMMAND` 和 `ACK/ERROR`，RK 可以看到 MCU 电源状态、IWDG 状态、电量、充电、接触检测等字段，也可以下发 `ENTER_BOOTLOADER`。Bootloader 部分把 APP 区放到 `0x08004000`，由 RK3562 通过串口触发升级，流程包括 APP 写备份寄存器请求、复位进入 Bootloader、`IAP1` 握手、16 字节头校验、页擦写、CRC32 校验、设置 VTOR/MSP 并跳转 APP。
+
+RK3562 侧我参与了 `CommRouter`、`PeripheralManager`、`LinkController` 相关联调。`CommRouter` 通过 `poll` 同时处理 APK UDP、P401 TUN UDP、UART MAVLink 和本地 UDS 外设消息，根据来源把 MAVLink 路由到 APK 或 P401；`PeripheralManager` 读取 input 按键、做短按/长按判断并构造 `COMMAND_LONG`，同时管理 `can1` 上的 CAN-MAC 配对；`LinkController` 做链路检测和网络侧辅助。后续我还参与了 P401 图传链路无感快速配对方案，基于天地端 `tun` 网卡 MAC，通过 CAN/DroneCAN 自定义报文做 MAC report、ACK 和去重，地面端在 `can1` 上完成启动上报、模拟天空端报文注入和 ACK 验证。调试时主要用 ADB、logcat、tcpdump、SocketCAN、串口日志、示波器和逻辑分析仪定位问题。
 
 ### 可追问点
 
 - UART 协议为什么要有 `seq` 和 CRC？
 - TLV 格式相比固定结构体有什么好处？
+- MCU 开关机状态机怎么区分短按、长按、低电拒绝上电？
+- 为什么 MCU 要通过 PC8/RK809 `PWRON` 脉冲配合 RK 息屏/唤醒/关机？
+- 电量显示为什么要做显示平滑和低电保护？
 - Bootloader 为什么要把 APP 放到 `0x08004000`？
 - UART-IAP 如何处理断电或传输出错？
 - FreeRTOS 任务之间如何避免阻塞？
@@ -57,7 +62,7 @@ RK3562 侧我参与了 `CommRouter`、`PeripheralManager`、`LinkController` 相
 
 可以说：
 
-> 我主要负责 MCU 侧固件和 RK-MCU 通信链路，参与 RK3562 板端服务联调。
+> 我主要负责 MCU 侧电源/按键状态机、状态采集、RK-MCU UART 协议和 Bootloader/IAP，参与 RK3562 板端服务和 P401/CAN 链路联调。
 
 > P401 无感配对中，我参与了 CAN-MAC 交换协议和地面端链路实现/验证，能解释 report/ACK 帧格式、SocketCAN 调试和天空端 MCP2515 接收链路的硬件边界。
 
