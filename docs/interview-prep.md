@@ -28,7 +28,7 @@
 
 ### 一句话概括
 
-这是一个 RK3562 Android SoC + STM32F103 MCU 的手持设备控制链路项目，我主要参与 MCU 固件、RK-MCU 串口协议、Bootloader/IAP，以及 RK3562 板端服务和 CAN/UART/UDP/MAVLink 链路联调。
+这是一个 RK3562 Android SoC + STM32F103 MCU 的手持设备控制链路项目，我主要参与 MCU 固件、RK-MCU 串口协议、Bootloader/IAP，以及 RK3562 板端服务、CAN/UART/UDP/MAVLink 链路和 P401 图传无感配对联调。
 
 ### 2 分钟讲法
 
@@ -36,7 +36,7 @@
 
 MCU 侧我主要做 FreeRTOS 任务组织、IWDG、GPIO/ADC/I2C/UART/CAN 外设相关逻辑，以及 UART-IAP Bootloader。Bootloader 部分把 APP 区放到 `0x08004000`，由 RK3562 通过串口触发升级，流程包括握手、擦写、分包传输、CRC 校验和复位跳转。
 
-RK3562 侧我参与了 `CommRouter`、`PeripheralManager`、`LinkController` 相关联调。`CommRouter` 负责 MAVLink 消息路由和去重，`PeripheralManager` 管理 CAN/GPIO 和本地外设桥接，`LinkController` 做链路检测和网络侧辅助。调试时主要用 ADB、logcat、tcpdump、SocketCAN、串口日志、示波器和逻辑分析仪定位问题。
+RK3562 侧我参与了 `CommRouter`、`PeripheralManager`、`LinkController` 相关联调。`CommRouter` 负责 MAVLink 消息路由和去重，`PeripheralManager` 管理 CAN/GPIO 和本地外设桥接，`LinkController` 做链路检测和网络侧辅助。后续我还参与了 P401 图传链路无感快速配对方案，基于天地端 `tun` 网卡 MAC，通过 CAN/DroneCAN 自定义报文做 MAC report、ACK 和去重，地面端在 `can1` 上完成启动上报、模拟天空端报文注入和 ACK 验证。调试时主要用 ADB、logcat、tcpdump、SocketCAN、串口日志、示波器和逻辑分析仪定位问题。
 
 ### 可追问点
 
@@ -48,6 +48,10 @@ RK3562 侧我参与了 `CommRouter`、`PeripheralManager`、`LinkController` 相
 - CAN `ERROR-ACTIVE`、`ERROR-PASSIVE` 表示什么？
 - Android init 服务如何配置和验证？
 - `tcpdump`、`candump`、`logcat` 分别解决哪类问题？
+- P401 图传为什么要做 MAC 无感配对？
+- CAN/DroneCAN MAC report 和 ACK 报文如何设计？
+- 地面端验证通过和天空端自动化未完全验证的边界是什么？
+- MCP2515 进入 `ERROR-PASSIVE` 或错误解码时怎么分层定位？
 
 ### 回答边界
 
@@ -55,9 +59,13 @@ RK3562 侧我参与了 `CommRouter`、`PeripheralManager`、`LinkController` 相
 
 > 我主要负责 MCU 侧固件和 RK-MCU 通信链路，参与 RK3562 板端服务联调。
 
+> P401 无感配对中，我参与了 CAN-MAC 交换协议和地面端链路实现/验证，能解释 report/ACK 帧格式、SocketCAN 调试和天空端 MCP2515 接收链路的硬件边界。
+
 不要说：
 
 > 整个 Android 系统、APK、全部板端服务和 MCU 都是我独立完成。
+
+> P401 配对已经在所有自动化、反复接触/断开和高频天空端 TX 场景完全稳定。
 
 ## 项目二：RK3588 IMX415
 
@@ -142,3 +150,4 @@ vertical_blanking: 1170
 - 能解释为什么 AIQ 会影响曝光、增益、vblank 和 ISP 输出。
 - 能说清楚哪些是你主责，哪些是参与联调。
 - 准备好 2 到 3 个具体问题定位案例，不要只背概念。
+- 能讲 P401 MAC 配对链路：地面 `can1` / 天空 `can0`，`tun` MAC report/ACK，通过 `candump` 和服务日志验证，并说明天空端 MCP2515 接收链路仍是硬件验证边界。

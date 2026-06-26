@@ -66,6 +66,7 @@
 | 通信 | SPI | CPOL/CPHA、片选、高速外设 | 备用八股 |  | 未学 |  |  |
 | 通信 | CAN | 仲裁、错误检测、状态机 | CAN 外设/MAVLink-CAN |  | 未学 |  |  |
 | 通信 | SocketCAN | `can0`、`candump`、`cansend` | RK3562 CAN 联调 |  | 未学 |  |  |
+| 通信 | CAN MAC 交换 / P401 配对 | report/ACK DTID、节点 ID、dry-run、验证边界 | P401 图传无感快速配对 | 2 | 在学 | 2026-06-26 | 新增项目点：地面端 `can1` 已验证 MAC report/ACK；天空端 MCP2515 接收链路仍是硬件验证边界，不能夸大全自动稳定。 |
 | 通信 | MAVLink | sysid/compid/msgid/seq/payload | CommRouter 路由 |  | 未学 |  |  |
 | 通信 | 路由/去重 | endpoint、route matrix、时间窗口 | CommRouter |  | 未学 |  |  |
 | 网络 | TCP/UDP | 可靠性、延迟、报文边界 | UDP 图传/遥测 |  | 未学 |  |  |

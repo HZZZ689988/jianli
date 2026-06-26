@@ -8,6 +8,7 @@
 
 - 参与企业级手持设备嵌入式软件开发，覆盖 STM32F103 MCU、RK3562 Android 板端服务、RK-MCU 通信协议、CAN/UART/UDP/MAVLink 链路、Bootloader/IAP、硬件联调。
 - 参与 RK3562 侧 `CommRouter`、`PeripheralManager`、`LinkController` 等服务，完成 UART、CAN、GPIO、APK、P401 网络链路之间的 MAVLink 消息路由和联调验证。
+- 参与 P401 图传无感快速配对链路开发，基于天地端 `tun` 网卡 MAC 和 CAN/DroneCAN 自定义报文完成地面端 MAC 上报、ACK、去重和 dry-run 配对验证。
 - 使用 `logcat`、`tcpdump`、串口日志、SocketCAN、ADB、示波器/逻辑分析仪等工具定位链路问题。
 
 ### 本地证据位置
@@ -32,18 +33,37 @@
 - `D:\handle_fire_software\apk\shooter-apk\README.md`
   - 记录 Android 端 H.265 RTP、MAVLink、BBox OSD、UDP 端口、Compose/MediaCodec 等应用侧信息。
 
+- `D:\CAN_TEST1\.codex_gcs_support_lf\docs\can_p401_mac_pairing.md`
+  - 记录 P401 `tun` MAC 通过 CAN/DroneCAN 链路交换的地面端实现。
+  - 记录地面端默认配置：`can1`、本地节点 `2`、对端节点 `1`、MAC report DTID `8195/0x2003`、ACK DTID `8196/0x2004`、result DTID `8197/0x2005`、启动上报 5 帧、`dry_run=true`。
+  - 记录扩展 CAN 帧格式：`CAN ID = priority(7) << 24 | DTID << 8 | source_node_id`，payload 前 6 字节为 `tun` MAC，第 7 字节为 MAC 类型，第 8 字节为 DroneCAN 单帧 tail byte。
+  - 记录地面端模拟天空端报文注入、ACK 日志和 `candump -L can1` 验证方式。
+
+- `D:\CAN_TEST1\docs\project-status.md`
+  - 记录 RK3562 地面端和 RK3588 天空端 CAN 链路 bring-up、MAC 交换、接触状态机、MCP2515/XL2515 接收链路问题和验证边界。
+  - 记录地面端 `can1` 为 RK3562 SoC CAN，500 kbit/s，`sample-point 0.868`，`restart-ms 100`，由 `PeripheralManager` 等服务配置。
+  - 记录地面端 MAC pairing 已部署并验证启动上报、模拟天空端 `07200301` 报文后的 `07200402` ACK，以及 `dry_run=true skip_pairing` 日志。
+  - 记录天空端外置 MCP2515-over-SPI `can0` 接收链路存在错误状态、错误解码或 RX 为 0 的硬件/电气/采样边界，自动天空端服务和高频自动 TX 仍需谨慎。
+
+- `D:\CAN_TEST1\rk3588_rk3562_can_mac_issue_summary_zh.md`
+  - 汇总 MAC 交换协议、天地端脚本路径、手动 MAC 交换成功片段和当前阻塞点。
+  - 明确 MAC 交换协议和脚本基本可用，但当前工程重点应放在天空端外部 CAN 接收链路的硬件恢复、电气测量和真实接收验证。
+
 ### 面试中可说的证据点
 
 - `CommRouter` 不是单纯转发 demo，而是围绕多来源 MAVLink 做 endpoint 标记、route matrix 和下行去重。
 - `PeripheralManager` 覆盖 CAN/GPIO 节点和 MAVLink-CAN bridge，属于板端外设管理和消息桥接角色。
 - `LinkController` 覆盖链路可达性检测、QoS 或网络侧辅助控制。
 - 板端验证不只看代码编译，还包括 Android init 服务状态、ADB/logcat、tcpdump、SocketCAN、串口收发和 APK 显示。
+- P401 无感配对不是单纯手动配置 MAC，而是通过 CAN/DroneCAN 自定义报文交换天地端 `tun` MAC，并设计 report/ACK/result DTID、节点 ID、启动重复上报、去重窗口和 dry-run 配对钩子。
+- 地面端 RK3562 `can1` 的 MAC 上报和 ACK 链路已经能通过模拟天空端报文和 `candump`/日志验证；天空端自动化和长期稳定性要结合 MCP2515 外部接收链路状态谨慎表述。
 
 ### 需要谨慎表达
 
 - 不要把整个 RK3562 Android 系统、APK、所有服务都说成独立完成。
 - MCU Bootloader/IAP 如果被追问，应结合你的实际源码和板端记录说明；公开简历仓库不放完整升级协议和公司代码。
 - 涉及真实设备 IP、公司项目代号、固件包、日志原文时，面试中只解释技术过程，不展示敏感信息。
+- P401 CAN-MAC 配对不要说“全自动量产闭环已完全稳定”。准确表达是：参与协议和地面端实现/验证，受天空端外置 MCP2515 接收链路限制，自动天空端服务、高频自动 TX 和反复接触/断开场景仍需继续硬件链路验证。
 
 ## 项目二：RK3588 IMX415 摄像头 1080p60 适配与 3A 问题定位
 
