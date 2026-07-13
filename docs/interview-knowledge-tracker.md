@@ -77,18 +77,18 @@
 
 | 模块 | 知识点 | 面试要求 | 项目关联 | 掌握程度 | 状态 | 最近复盘 | 备注/卡点 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Linux | 进程/线程 | 地址空间、资源、调度 | 板端服务 | 2 | 在学 | 2026-06-04 | 已讲解，待反馈：进程是资源分配单位，线程共享进程地址空间；CommRouter/PeripheralManager 若是独立进程需 IPC，服务内部多线程需同步共享路由表/状态。 |
-| Linux | 同步机制 | mutex/cond/atomic/消息队列 | 路由表、链路状态 | 2 | 在学 | 2026-06-04 | 已讲解，待反馈：mutex 保护共享结构，atomic 适合简单计数，condition variable 等待队列非空；也可用 poll 单线程事件循环减少锁。 |
-| Linux | 文件描述符 | open/read/write/ioctl/socket | tty/CAN/video node | 3 | 待复盘 | 2026-06-01 | 可结合项目说明：fd 是用户态访问内核资源的句柄，UART `/dev/ttyS3`、V4L2 `/dev/videoX`、UDP/CAN socket 都能通过 fd 统一用 read/write/ioctl/poll 等方式操作。 |
-| Linux | IO 多路复用 | select/poll/epoll、同时等待多个 fd | UART/UDP/CAN 事件循环 | 3 | 待复盘 | 2026-06-01 | 已理解：poll 用来同时等多个 fd，避免阻塞在某一个 read；RK3562 服务可统一处理 UART、UDP、CAN，再做 MAVLink 路由/去重。 |
-| Linux | socket 编程 | UDP send/recv、端口、抓包 | APK/P401 网络链路 | 3 | 待复盘 | 2026-06-01 | 基本了解：UDP socket 是 fd；bind 是绑定本地监听端口，recvfrom 收一个 datagram 并拿到对端 IP/端口，sendto 指定目标 IP/端口发送。 |
+| Linux | 进程/线程 | 地址空间、资源、调度 | 板端服务 | 2 | 在学 | 2026-07-13 | 已结合 CommRouter 讲解单线程 poll 与多线程方案：多线程可隔离阻塞并利用多核，但共享路由状态需要锁和队列；当前仍需独立回答进程/线程基础。 |
+| Linux | 同步机制 | mutex/cond/atomic/消息队列 | 路由表、链路状态 | 2 | 在学 | 2026-07-13 | 已理解 poll 单线程事件循环可以减少共享状态加锁；多线程方案仍需 mutex、队列和生命周期管理，待结合具体竞态案例复述。 |
+| Linux | 文件描述符 | open/read/write/ioctl/socket | tty/CAN/video node | 3 | 待复盘 | 2026-07-13 | 已结合 CommRouter 复习：UART、UDP、UDS 均可作为 fd 交给 poll；能理解 fd/events/revents，但尚未闭卷手写完整事件循环。 |
+| Linux | IO 多路复用 | select/poll/epoll、同时等待多个 fd | UART/UDP/CAN 事件循环 | 3 | 待复盘 | 2026-07-13 | 已讲解 poll 与多线程取舍、pollfd 遍历、POLLIN/POLLERR/POLLHUP；本轮未独立作答，下一次优先闭卷复述。 |
+| Linux | socket 编程 | UDP send/recv、端口、抓包 | APK/P401 网络链路 | 3 | 待复盘 | 2026-07-13 | 已讲解 socket/bind/recvfrom/sendto、临时源端口、datagram 边界，以及实时数据与关键命令的不同可靠性策略；待独立复述。 |
 | Linux | 阻塞/非阻塞 IO | blocking、nonblocking、EAGAIN、同步/异步区别 | UART/UDP/CAN 多链路处理 | 2 | 在学 | 2026-06-04 | 已讲解，待反馈：阻塞 read 会卡住线程；非阻塞没数据返回 EAGAIN，通常配合 poll/epoll，避免服务卡在某个 fd。 |
 | Linux | `ioctl` | 设备控制命令、request/arg、V4L2 controls | 串口配置、V4L2 `/dev/videoX` | 2 | 在学 | 2026-06-04 | 已讲解，待反馈：read/write 传数据，ioctl 做设备配置；V4L2 设置格式、buffer、streamon、exposure/vblank 都走 ioctl。 |
 | Linux | 用户态/内核态 | 系统调用、copy_from_user/to_user、应用层/驱动层关系 | CommRouter、V4L2、SocketCAN | 2 | 在学 | 2026-06-04 | 已讲解，待反馈：应用层通常在用户态，驱动层通常在内核态；用户态通过 open/read/write/ioctl/socket 进入内核驱动。 |
 | Linux | 设备节点/字符设备 | `/dev/xxx`、char/block、major/minor | `/dev/ttyS3`、`/dev/video0/11` | 2 | 在学 | 2026-06-04 | 已讲解，待反馈：设备节点不是普通文件，open 后得到 fd；major 找驱动，minor 区分同类设备实例。 |
-| Android | init 服务 | `.rc`、service、class、重启 | CommRouter 自启动 | 2 | 重点薄弱 | 2026-06-01 | 不太熟悉，需加强：`/vendor/etc/init/*.rc`、`getprop init.svc.xxx`、`setprop ctl.start/stop/restart xxx`、`ps -A`、`logcat -b all`，以及服务起不来时检查路径、权限、设备节点、SELinux。 |
-| Linux | 权限/用户组 | `ls -l`、user/group、设备节点访问权限 | `/dev/ttyS3`、`/dev/videoX` 访问 | 3 | 待复盘 | 2026-06-04 | 大致了解：设备节点有 owner/group/rw 权限；服务打不开设备时查 `/dev/xxx` 权限、进程用户、init.rc 的 user/group 和 Permission denied 日志。 |
-| Android | SELinux | enforcing/permissive、avc denied、`ls -Z`/`ps -AZ` | Android 服务访问设备节点 | 2 | 在学 | 2026-06-04 | 已讲解，待反馈：SELinux 是普通权限后的第二道门；文件权限看似正确但仍打不开设备时查 `avc: denied`。 |
+| Android | init 服务 | `.rc`、service、class、重启 | CommRouter 自启动 | 2 | 重点薄弱 | 2026-07-13 | 已讲解 `getprop init.svc.xxx`、`ps -A`、`setprop ctl.restart`、init `.rc`、日志和依赖资源的分层排查；仍未独立作答，继续列为重点薄弱。 |
+| Linux | 权限/用户组 | `ls -l`、user/group、设备节点访问权限 | `/dev/ttyS3`、`/dev/videoX` 访问 | 3 | 待复盘 | 2026-07-13 | 已结合服务启动排查复习设备 owner/group/mode、进程用户和 init.rc group；需要与 SELinux domain/label 分层回答。 |
+| Android | SELinux | enforcing/permissive、avc denied、`ls -Z`/`ps -AZ` | Android 服务访问设备节点 | 2 | 在学 | 2026-07-13 | 已理解普通权限正确仍可能被 SELinux 拒绝，应查 `avc: denied`、进程 domain 和设备 label；不能把关闭 SELinux 当作正式修复。 |
 | Android | ADB/logcat | 服务状态、日志定位 | RK3562 联调 | 4 | 已掌握 | 2026-06-01 | 熟悉：logcat 看 Android 用户态服务/APK/init 相关日志，可按 comm_router/mavlink/uart 等关键字筛。 |
 | Linux | dmesg | 内核/驱动日志 | camera/CAN/tty | 4 | 已掌握 | 2026-06-01 | 熟悉：dmesg 看 kernel/driver/设备树/probe/I2C/MIPI/CAN/tty 等问题。 |
 | Linux | tcpdump | 网络包定位 | UDP/MAVLink/RTP | 4 | 已掌握 | 2026-06-01 | 熟悉：tcpdump 看 UDP/RTP/MAVLink 包是否真实发出、目标 IP/端口是否正确。 |
