@@ -67,7 +67,8 @@
 | 通信 | SPI | CPOL/CPHA、片选、高速外设 | 备用八股 |  | 未学 |  |  |
 | 通信 | CAN | 仲裁、错误检测、状态机 | CAN 外设/MAVLink-CAN |  | 未学 |  |  |
 | 通信 | SocketCAN | `can0`、`candump`、`cansend` | RK3562 CAN 联调 |  | 未学 |  |  |
-| 通信 | CAN MAC 交换 / P401 配对 | report/ACK DTID、节点 ID、dry-run、验证边界 | P401 图传无感快速配对 | 2 | 在学 | 2026-06-26 | 新增项目点：地面端 `can1` 已验证 MAC report/ACK；天空端 MCP2515 接收链路仍是硬件验证边界，不能夸大全自动稳定。 |
+| 通信 | CAN MAC 交换 / P401 配对 | 10 Hz 触发、READY/ACK、八帧身份交换、DONE、验证边界 | P401 图传无感快速配对 | 2 | 在学 | 2026-08-05 | 最新实现已从早期 report/ACK DTID 演进为 `PAIRTRIG` 多阶段状态机；500 kbit/s、天空端 `clock 12500000` 已确认，但 3 秒目标仍缺健康接触多轮证据。 |
+| 通信 | CAN 固件分包 / A/B 升级 | 分区、File.Read、超时重试、整包 CRC32、trial/confirmed、异常回滚 | AGS 驱动板安全升级 | 3 | 待复盘 | 2026-08-05 | 已确认 16 KiB Bootloader、双 52 KiB slot、256 B File.Read、20 ms 请求、1.5 s 超时和 5 次重试；10 轮正常升级及 150/150 CAN 恢复通过，断电/不健康回滚等异常路径未验证。 |
 | 通信 | MAVLink | sysid/compid/msgid/seq/payload | CommRouter 路由 |  | 未学 |  |  |
 | 通信 | 路由/去重 | endpoint、route matrix、时间窗口 | CommRouter |  | 未学 |  |  |
 | 网络 | TCP/UDP | 可靠性、延迟、报文边界 | UDP 图传/遥测 |  | 未学 |  |  |
@@ -89,6 +90,10 @@
 | Android | init 服务 | `.rc`、service、class、重启 | CommRouter 自启动 | 2 | 重点薄弱 | 2026-07-13 | 已讲解 `getprop init.svc.xxx`、`ps -A`、`setprop ctl.restart`、init `.rc`、日志和依赖资源的分层排查；仍未独立作答，继续列为重点薄弱。 |
 | Linux | 权限/用户组 | `ls -l`、user/group、设备节点访问权限 | `/dev/ttyS3`、`/dev/videoX` 访问 | 3 | 待复盘 | 2026-07-13 | 已结合服务启动排查复习设备 owner/group/mode、进程用户和 init.rc group；需要与 SELinux domain/label 分层回答。 |
 | Android | SELinux | enforcing/permissive、avc denied、`ls -Z`/`ps -AZ` | Android 服务访问设备节点 | 2 | 在学 | 2026-07-13 | 已理解普通权限正确仍可能被 SELinux 拒绝，应查 `avc: denied`、进程 domain 和设备 label；不能把关闭 SELinux 当作正式修复。 |
+| Linux | 启动链与镜像组成 | U-Boot、Kernel、DTB、rootfs 的职责和启动关系 | RK3588 系统构建 | 1 | 重点薄弱 | 2026-08-05 | 远端审计新增项目主线；需要能从上电到挂载 rootfs 完整复述，并说明各镜像的构建和烧录位置。 |
+| Linux | 外部内核模块 | ARCH/CROSS_COMPILE、内核构建目录、vermagic、依赖和加载验证 | RTL8188FU、tun.ko | 2 | 在学 | 2026-08-05 | RTL8188FU 的 USB ID、模块大小、vermagic、联网和吞吐数据已补；仍需闭卷复述构建依赖和方向不对称问题，不能声称 TCP/UDP 均大于 20 Mbit/s。 |
+| Linux | SDK 构建与 rootfs 定制 | 构建入口、包裁剪、依赖预置、镜像打包、可重复构建 | RK3588 板端交付 | 3 | 待复盘 | 2026-08-05 | 已确认 `./build.sh rootfs`、no-Qt 真机闭环、3.60 GB 典型 rootfs、约 3.72 GB update.img 和反向解包/e2fsck 验证；现有证据不支持“缩减 500 MB”。 |
+| Linux | 量产烧录与批量升级 | 设备身份、并发状态机、超时重试、版本检查、自检和日志归档 | SD 卡烧录、产线工具 | 1 | 重点薄弱 | 2026-08-05 | 需补充实际连接方式、并发数量、考核通过条件和失败样本，避免只说“脚本返回 0”。 |
 | Android | ADB/logcat | 服务状态、日志定位 | RK3562 联调 | 4 | 已掌握 | 2026-06-01 | 熟悉：logcat 看 Android 用户态服务/APK/init 相关日志，可按 comm_router/mavlink/uart 等关键字筛。 |
 | Linux | dmesg | 内核/驱动日志 | camera/CAN/tty | 4 | 已掌握 | 2026-06-01 | 熟悉：dmesg 看 kernel/driver/设备树/probe/I2C/MIPI/CAN/tty 等问题。 |
 | Linux | tcpdump | 网络包定位 | UDP/MAVLink/RTP | 4 | 已掌握 | 2026-06-01 | 熟悉：tcpdump 看 UDP/RTP/MAVLink 包是否真实发出、目标 IP/端口是否正确。 |
@@ -98,6 +103,7 @@
 | 模块 | 知识点 | 面试要求 | 项目关联 | 掌握程度 | 状态 | 最近复盘 | 备注/卡点 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 驱动 | 设备树 | DTS/DTSI/DTB、硬件描述 | IMX415 board config |  | 未学 |  |  |
+| 驱动 | CAN 设备树与参考时钟 | SPI/IRQ/pinctrl/fixed-clock、实际晶振、位时序和真实收帧验证 | RK3588 外置 CAN 控制器 | 3 | 待复盘 | 2026-08-05 | 已确认旧 16 MHz DTS/`clock 8000000` 与实板 25 MHz 晶振不匹配，修正后 `clock 12500000`、500 kbit/s、sample point 0.680；物理触点/收发器稳定性需与时钟问题分开。 |
 | 驱动 | `compatible`/`probe` | 驱动匹配、资源申请、注册设备 | IMX415 probe |  | 未学 |  |  |
 | 驱动 | platform/I2C driver | SoC 外设 vs I2C 外设 | RKISP/RKCIF vs IMX415 |  | 未学 |  |  |
 | 驱动 | 字符设备/ioctl | 用户态访问内核设备 | V4L2/ioctl 类比 |  | 未学 |  |  |
@@ -130,4 +136,6 @@
 
 | 日期 | 复盘内容 | 做对的点 | 卡住的点 | 下一步 |
 | --- | --- | --- | --- | --- |
+| 2026-08-05 | 同步远端并复核最新版简历审计分支 | 保留当前项目证据文档，提取新增风险项，没有直接合并会删除证据的分支 | A/B 精确参数、RK3588 系统构建、CAN 时钟与产线数据仍缺闭卷和脱敏证据 | 优先完成关键红线问题的资料核对，再按项目做闭卷压力面试 |
+| 2026-08-05 | 读取本机关联工程并补充参数 | 补齐两套 A/B、手持电源/电量、RK 端口、P401 新协议、CAN 时钟、rootfs 和 Wi-Fi 证据边界 | 手持 A/B 真机、两套异常回滚、P401 多轮时延和产线统计仍缺 | 先按证据索引闭卷复述，再补异常路径真机记录 |
 |  |  |  |  |  |
